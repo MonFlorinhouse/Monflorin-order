@@ -1,485 +1,1428 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌿MonFlorin House - Plant Order</title>
+    <title>MonFlorin House</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: #f5f8f5; color: #333; line-height: 1.6; padding-bottom: 80px; }
         header { background: #2e7d32; color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 99; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h1 { font-size: 1.2rem; }
-        .currency-box { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
-        .currency-btn { border: 1px solid #fff; background: rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 0.9rem; cursor: pointer; margin-left: 4px; }
+        .header-right { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; gap: 6px; align-items: center; }
+        .logout-btn { background: rgba(255,255,255,0.25); color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; display: none; }
+        .logout-btn.show { display: block; }
+        .currency-btn { border: 1px solid #fff; background: rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
         .currency-btn.active { background: #fff; color: #2e7d32; font-weight: bold; }
-        .container { max-width: 600px; margin: 0 auto; padding: 15px; }
+        .search-box { max-width: 600px; margin: 15px auto 5px; padding: 0 15px; }
+        .search-box input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; }
+        .container { max-width: 600px; margin: 0 auto; padding: 0 15px; }
+        .shipping-note { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 0.9rem; color: #8d6e00; line-height: 1.5; }
 
-        /* 分类标签 */
-        .tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .tab { flex-shrink: 0; padding: 8px 16px; background: white; border-radius: 20px; cursor: pointer; border: 2px solid #e0e0e0; transition: all 0.2s; }
-        .tab.active { background: #2e7d32; color: white; border-color: #2e7d32; }
-        .tab-edit { font-size: 0.8rem; margin-left: 4px; opacity: 0.6; }
+        .category-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+        .category-tab { padding: 6px 14px; border-radius: 20px; background: #eee; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+        .category-tab.active { background: #2e7d32; color: white; }
 
-        /* 商品项 */
-        .product-list { display: none; }
-        .product-list.active { display: grid; gap: 12px; }
-        .product-card { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 10px; }
-        .product-img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; background: #eee; }
+        .product-list { display: block; }
+        .product-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; align-items: flex-start; gap: 10px; }
+        .product-img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; background: #eee; flex-shrink: 0; display:flex;align-items:center;justify-content:center;font-size:24px; cursor: pointer; transition: transform 0.2s; }
+        .product-img:hover { transform: scale(1.05); }
         .product-info { flex: 1; min-width: 0; }
-        .product-name { font-weight: 600; margin-bottom: 4px; font-size: 0.95rem; }
-        .product-price { color: #e65100; font-weight: bold; font-size: 1.05rem; }
-        .qty-box { display: flex; align-items: center; gap: 6px; margin-left: 4px; flex-shrink: 0; }
+        .product-name { font-weight: 600; margin-bottom: 4px; font-size: 0.95rem; line-height: 1.4; }
+        .product-cat { font-size: 0.8rem; color: #666; margin-bottom: 4px; display: inline-block; background: #f0f0f0; padding: 1px 8px; border-radius: 10px; }
+        .product-price { color: #e65100; font-weight: bold; font-size: 1.05rem; margin-bottom: 6px; }
+        .stock-info { font-size: 0.85rem; color: #555; margin-bottom: 6px; }
+        .stock-out { color: #d32f2f; font-weight: bold; }
+        .qty-box { display: flex; align-items: center gap: 6px; flex-shrink: 0; }
         .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: #e8f5e9; color: #2e7d32; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .qty-btn:disabled { background: #eee; color: #ccc; cursor: not-allowed; }
         .qty-num { min-width: 24px; text-align: center; font-weight: 600; }
 
-        /* 购物车 */
-        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #eee; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; box-shadow: 0 -2px 8px rgba(0,0,0,0.08); }
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #eee; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; box-shadow: 0 -2px 8px rgba(0,0,0,0.08); gap: 10px; flex-wrap: wrap; }
         .cart-info { font-weight: 600; font-size: 0.95rem; }
-        .cart-btn { background: #2e7d32; color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 1rem; cursor: pointer; }
+        .cart-btn { background: #2e7d32; color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 1rem; cursor: pointer; white-space: nowrap; }
         .cart-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* 弹窗 */
+        .coupon-row { display: flex; gap: 8px; margin: 10px 0; }
+        .coupon-row input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
+        .coupon-btn { padding: 8px 12px; background: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+        .coupon-info { font-size: 0.9rem; margin: 6px 0; padding: 6px 10px; border-radius: 4px; display: none; }
+        .coupon-info.applied { display: block; background: #e8f5e9; color: #2e7d32; }
+        .coupon-info.invalid { display: block; background: #ffebee; color: #c62828; }
+
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 15px; }
         .modal.show { display: flex; }
-        .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 500px; max-height: 95vh; overflow-y: auto; padding: 20px; }
+        .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 600px; max-height: 92vh; overflow-y: auto; padding: 20px; position: relative; }
+        .close-x { position: absolute; right: 15px; top: 15px; font-size: 1.3rem; cursor: pointer; color: #888; }
+        .close-x:hover { color: #333; }
         .modal-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+        .cart-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f5f5f5; gap: 8px; }
         .input-group { margin: 10px 0; }
         label { display: block; margin-bottom: 4px; font-size: 0.95rem; color: #444; line-height: 1.4; }
         label span.required { color: red; margin-left: 2px; }
         label .saved-badge { color: #2e7d32; font-size: 0.8rem; margin-left: 6px; font-weight:normal; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        input[type="file"] { padding: 6px; font-size: 0.9rem; }
         textarea { resize: vertical; min-height: 70px; }
-        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
-        button { cursor: pointer; }
-        .btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 1rem; }
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .btn { flex: 1; min-width: 100px; padding: 10px; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
         .btn-submit { background: #2e7d32; color: white; }
-        .btn-close { background: #eee; }
-        .empty-tip { text-align: center; color: #888; padding: 20px; }
+        .btn-close { background: #eee; color: #333; }
+        .btn-danger { background: #c62828; color: white; }
+        .btn-info { background: #0288d1; color: white; }
+        .btn-sm { padding: 5px 8px; font-size: 0.85rem; flex: none; }
         .tip { font-size: 0.85rem; color: #666; margin-top: 8px; line-height: 1.5; }
         .success-msg { color: #2e7d32; padding: 12px; background: #e8f5e9; border-radius: 6px; margin-bottom: 10px; display: none; line-height: 1.5; }
         .error-text { color: #d32f2f; font-size: 0.85rem; margin-top: 4px; display: none; line-height: 1.4; }
         .memo-tip { color: #2e7d32; font-size: 0.85rem; margin-bottom: 8px; line-height: 1.4; }
+        .discount-line { color: #2e7d32; font-size: 0.95rem; margin-top: 4px; }
+        .total-final { font-weight: bold; font-size: 1.05rem; color: #e65100; margin-top: 4px; }
+        .preview-img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; margin-top: 6px; display: none; }
+        .import-format-tip { background: #f0f4c3; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 10px; line-height: 1.5; }
+
+        .img-lightbox { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; cursor: zoom-out; }
+        .img-lightbox.show { display: flex; }
+        .img-lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; object-fit: contain; }
+
+        .admin-secret-icon {
+            position: fixed; right: 12px; bottom: 90px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: transparent; background: rgba(255,255,255,0.6); border-radius: 50%; cursor: pointer; z-index: 50; user-select: none; transition: all 0.2s; border: 1px solid rgba(0,0,0,0.05);
+        }
+        .admin-secret-icon:hover { background: rgba(46,125,50,0.1); color: #2e7d32; }
+
+        .admin-tabs { display: flex; gap: 6px; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 6px; flex-wrap: wrap; }
+        .admin-tab { padding: 6px 12px; font-size: 0.9rem; border-radius: 6px 6px 0 0; cursor: pointer; background: #f5f5f5; }
+        .admin-tab.active { background: #e8f5e9; color: #2e7d32; font-weight: bold; }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        .stock-item, .cat-item, .prod-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; }
+        .stock-name, .cat-name, .prod-name { flex: 1; font-size: 0.9rem; min-width: 120px; }
+        .stock-input, .cat-input, .prod-name-input { width: 140px; padding: 4px; }
+        .code-output { background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.7rem; max-height: 400px; overflow-y: auto; white-space: pre; word-break: break-all; margin-top: 10px; line-height: 1.4; }
+        .highlight-box { background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 12px; margin: 10px 0; font-weight: bold; color: #856404; }
     </style>
 </head>
 <body>
 
+<div class="img-lightbox" id="imgLightbox" onclick="closeLightbox()">
+    <img id="lightboxImg">
+</div>
+
 <header>
-    <h1>🌿MonFlorin House</h1>
-    <div class="currency-box">
-        <span style="font-size:0.85rem;">Currency</span>
+    <h1>MonFlorin House</h1>
+    <div class="header-right">
+        <span style="font-size:0.85rem; color:rgba(255,255,255,0.9);">Currency</span>
         <button class="currency-btn active" data-cur="MYR">RM</button>
         <button class="currency-btn" data-cur="SGD">S$</button>
+        <button class="logout-btn" id="logoutBtn" onclick="logout()">退出</button>
     </div>
 </header>
 
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="🔍 Search here / 搜索...">
+</div>
+
 <div class="container">
-    <!-- 分类 -->
-    <div class="tabs">
-        <div class="tab active" data-cat="pot">小盆栽 / Small Pots</div>
-        <div class="tab" data-cat="tree">大树 / Large Plants</div>
-        <div class="tab" data-cat="custom" id="customTab">
-            <span id="customTabText">特色植物 / Special</span>
-            <span class="tab-edit" title="仅临时显示">✏️</span>
-        </div>
+    <div class="shipping-note">
+        ⚠️ Prices shown <strong>exclude delivery fee</strong>.<br>
+        ⚠️ 以上价格<strong>不含运费</strong>，运费另行计算。
     </div>
 
-    <!-- 商品列表 -->
-    <div class="product-list active" id="list-pot"></div>
-    <div class="product-list" id="list-tree"></div>
-    <div class="product-list" id="list-custom"></div>
+    <div class="category-tabs" id="categoryTabs"></div>
+    <div class="product-list" id="productList"></div>
 </div>
 
-<!-- 购物车栏 -->
+<div class="admin-secret-icon" id="adminSecretIcon" title="🌿">🌿</div>
+
 <div class="cart-bar">
-    <div class="cart-info">🛒 共 <span id="cartCount">0</span> 件 · 总计 <span id="cartTotal">RM 0</span></div>
-    <button class="cart-btn" id="cartBtn" onclick="openCart()" disabled>去结算 / Checkout</button>
+    <div class="cart-info">🛒 <span id="cartCount">0</span> items · <span id="cartTotal">RM 0.00</span></div>
+    <button class="cart-btn" id="cartBtn" onclick="openCart()" disabled>Checkout / 去结算</button>
 </div>
 
-<!-- 购物车&表单弹窗 -->
 <div class="modal" id="cartModal">
     <div class="modal-content">
-        <div class="modal-title">订单详情 / Order Details</div>
+        <span class="close-x" onclick="closeModal('cartModal')">✕</span>
+        <div class="modal-title">Order Details / 订单详情</div>
         <div class="success-msg" id="successMsg">
-            ✅ 订单提交成功！<br>Order submitted successfully!<br>
-            我们会尽快与您联系确认送货与付款方式，感谢您的订购。<br>
-            We will contact you shortly to confirm delivery and payment.
+            ✅ Order submitted successfully!<br>✅ 订单提交成功！<br>
+            We will contact you shortly to confirm delivery and payment.<br>
+            我们会尽快与您联系确认送货与付款方式。
         </div>
         <div id="cartList"></div>
+
+        <div class="coupon-row">
+            <input type="text" id="couponCode" placeholder="Enter coupon code / 输入优惠码">
+            <button class="coupon-btn" onclick="applyCoupon()">Apply / 应用</button>
+        </div>
+        <div id="couponInfo" class="coupon-info"></div>
 
         <form id="orderForm">
             <input type="hidden" name="currency" id="hidCurrency">
             <input type="hidden" name="order_summary" id="hidSummary">
+            <input type="hidden" name="coupon_used" id="hidCoupon">
+            <input type="hidden" name="subtotal" id="hidSubtotal">
+            <input type="hidden" name="discount" id="hidDiscount">
+            <input type="hidden" name="total_payable" id="hidTotalPayable">
 
             <div class="memo-tip" id="memoTip"></div>
 
             <div class="input-group">
-                <label>姓名 / Customer Name <span class="required">*</span><span class="saved-badge" id="badgeName"></span></label>
-                <input type="text" name="customer_name" id="custName" placeholder="请输入您的姓名 / Your full name" required>
+                <label>Name / Customer Name <span class="required">*</span><span class="saved-badge" id="badgeName"></span></label>
+                <input type="text" name="customer_name" id="custName" placeholder="Your full name" required>
             </div>
             <div class="input-group">
-                <label>邮箱 / Email Address <span class="required">*</span><span class="saved-badge" id="badgeEmail"></span></label>
-                <input type="email" name="customer_email" id="custEmail" placeholder="用于接收订单确认 / For order confirmation" required>
+                <label>Email Address <span class="required">*</span><span class="saved-badge" id="badgeEmail"></span></label>
+                <input type="email" name="customer_email" id="custEmail" placeholder="For order confirmation" required>
             </div>
             <div class="input-group">
-                <label>联系电话 / Phone Number <span class="required">*</span> (请输入最多12位数字 / Up to 12 digits)<span class="saved-badge" id="badgePhone"></span></label>
-                <input type="tel" name="phone" id="phone" placeholder="例如 / e.g. 012345678901" required>
-                <div class="error-text" id="phoneErr">请输入正确的电话号码格式：最多12位数字，不要符号或字母<br>Invalid format: please enter up to 12 digits only, no symbols or letters</div>
+                <label>Phone Number <span class="required">*</span> (7–12 digits only)<span class="saved-badge" id="badgePhone"></span></label>
+                <input type="tel" name="customer_phone" id="custPhone" placeholder="e.g. 0123456789" required>
+                <div class="error-text" id="phoneErr">Please enter 7–12 digits only<br>请输入7–12位数字</div>
             </div>
             <div class="input-group">
-                <label>送货地址 / Delivery Address <span class="required">*</span><span class="saved-badge" id="badgeAddr"></span></label>
-                <textarea name="address" id="address" placeholder="请填写详细地址 / Full delivery address" required></textarea>
+                <label>Delivery Address <span class="required">*</span><span class="saved-badge" id="badgeAddr"></span></label>
+                <textarea name="delivery_address" id="address" placeholder="Full delivery address" required></textarea>
             </div>
             <div class="input-group">
-                <label>备注 / Remarks</label>
-                <textarea name="remarks" id="remark" placeholder="送货时间、特殊要求等 / Delivery time, special requests..."></textarea>
+                <label>Remarks / Notes</label>
+                <textarea name="remarks" id="remark" placeholder="Delivery time, special requests..."></textarea>
             </div>
 
             <div class="tip">
-                ⚠️ 提交后订单将直接发送给商家。您的信息将保存在本机，下次下单自动填充。<br>
-                Order sent directly to merchant. Your info is saved on this device for faster checkout.
+                ⚠️ Prices exclude delivery fee.<br>
+                ⚠️ 价格不含运费。
             </div>
 
             <div class="btn-row">
-                <button type="button" class="btn btn-close" onclick="closeModal()">返回 / Back</button>
-                <button type="submit" class="btn btn-submit" id="submitBtn">提交订单 / Submit</button>
+                <button type="button" class="btn btn-close" onclick="closeModal('cartModal')">Back / 返回</button>
+                <button type="submit" class="btn btn-submit" id="submitBtn">Submit Order / 提交订单</button>
             </div>
         </form>
     </div>
 </div>
 
+<div class="modal" id="adminLoginModal">
+    <div class="modal-content">
+        <span class="close-x" onclick="closeModal('adminLoginModal')">✕</span>
+        <div class="modal-title">🔐 Admin Login</div>
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="adminPassword" placeholder="Enter password">
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-close" onclick="closeModal('adminLoginModal')">Cancel</button>
+            <button class="btn btn-submit" onclick="verifyAdminPassword()">Login</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="editProductModal">
+    <div class="modal-content">
+        <span class="close-x" onclick="closeModal('editProductModal')">✕</span>
+        <div class="modal-title">✏️ Edit Product / 编辑商品</div>
+        <div class="input-group">
+            <label>Category / 分类</label>
+            <select id="editProdCat"></select>
+        </div>
+        <div class="input-group">
+            <label>Product Name / 商品名称</label>
+            <input type="text" id="editProdName">
+        </div>
+        <div class="input-group">
+            <label>Price (MYR) / 马币价格</label>
+            <input type="number" step="0.01" id="editProdMyr">
+        </div>
+        <div class="input-group">
+            <label>Price (SGD) / 新币价格</label>
+            <input type="number" step="0.01" id="editProdSgd">
+        </div>
+        <div class="input-group">
+            <label>Change Image / 更换图片</label>
+            <input type="file" id="editProdImg" accept="image/*" onchange="previewEditImg()">
+            <img id="editImgPreview" class="preview-img">
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-close" onclick="closeModal('editProductModal')">Cancel</button>
+            <button class="btn btn-submit" onclick="saveEditProduct()">✅ Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="adminModal">
+    <div class="modal-content">
+        <span class="close-x" onclick="closeModal('adminModal')">✕</span>
+        <div class="modal-title">🔧 Admin Panel</div>
+
+        <div class="admin-tabs">
+            <div class="admin-tab active" data-section="product">📦 Products</div>
+            <div class="admin-tab" data-section="import">📥 Import</div>
+            <div class="admin-tab" data-section="category">🏷️ Categories</div>
+            <div class="admin-tab" data-section="stock">📊 Stock</div>
+            <div class="admin-tab" data-section="coupon">🎫 Coupons</div>
+            <div class="admin-tab" data-section="export">💾 Export & Save</div>
+        </div>
+        <div class="admin-section active" id="admin-product">
+            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">Add / Edit / Delete Products — remember to Export & Save after changes!</p>
+            <div class="input-group">
+                <label>Category / 分类</label>
+                <select id="newProdCat"></select>
+            </div>
+            <div class="input-group">
+                <label>Product Name / 商品名称</label>
+                <input type="text" id="newProdName" placeholder="e.g. Blue Rose">
+            </div>
+            <div class="input-group">
+                <label>Image / 图片</label>
+                <input type="file" id="newProdImg" accept="image/*" onchange="previewImg()">
+                <img id="imgPreview" class="preview-img">
+            </div>
+            <div class="input-group">
+                <label>Price (MYR) / 马币价格</label>
+                <input type="number" step="0.01" id="newProdMyr" placeholder="e.g. 3.99">
+            </div>
+            <div class="input-group">
+                <label>Price (SGD) / 新币价格</label>
+                <input type="number" step="0.01" id="newProdSgd" placeholder="e.g. 1.49">
+            </div>
+            <div class="input-group">
+                <label>Initial Stock / 初始库存</label>
+                <input type="number" id="newProdStock" value="20" min="0">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-submit" onclick="addProduct()">➕ Add Product / 新增商品</button>
+            </div>
+            <h4 style="margin:20px 0 8px;">All Products / 所有商品</h4>
+            <div id="prodList"></div>
+        </div>
+
+        <div class="admin-section" id="admin-import">
+            <div class="highlight-box">
+                ⚠️ IMPORTANT: After importing → go to "💾 Export & Save" → Generate & Copy → Replace your file → Upload<br>
+                ⚠️ 重要：导入后 → 去「导出保存」→ 生成代码 → 复制 → 替换文件 → 上传！
+            </div>
+            <p style="font-size:0.9rem; color:#666; margin:12px 0;">Paste data below to import many products at once</p>
+            <div class="import-format-tip">
+                <strong>Format / 格式：</strong><br>
+                Category | Name | PriceMYR | PriceSGD | Stock<br>
+                Separate by TAB or comma. One product per line.<br>
+                用制表符或逗号分隔，每行一个商品。
+            </div>
+            <div class="input-group">
+                <label>Paste data here / 粘贴数据</label>
+                <textarea id="importData" placeholder="Outdoor Plants/室外植物, Red Flower, 12.99, 4.99, 20&#10;Succulent / 仙人掌, Cactus, 8.50, 3.20, 15"></textarea>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-submit" onclick="importProducts()">📥 Import Products / 批量导入</button>
+            </div>
+            <div id="importResult" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="admin-section" id="admin-category">
+            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">Add / Rename / Delete Categories</p>
+            <div class="input-group">
+                <label>New Category Name / 新分类名称</label>
+                <input type="text" id="newCategoryName" placeholder="e.g. Jepun Rose">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-submit" onclick="addCategory()">➕ Add Category / 新增分类</button>
+            </div>
+            <h4 style="margin:20px 0 8px;">All Categories / 现有分类</h4>
+            <div id="categoryList"></div>
+        </div>
+
+        <div class="admin-section" id="admin-stock">
+            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">Edit stock quantity. 0 = Out of Stock</p>
+            <div id="stockList"></div>
+            <div class="btn-row" style="margin-top:15px;">
+                <button class="btn btn-submit" onclick="saveStock()">✅ Save Stock / 保存库存</button>
+            </div>
+        </div>
+
+        <div class="admin-section" id="admin-coupon">
+            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">Create coupons for customers to use</p>
+            <div class="input-group">
+                <label>Coupon Code / 优惠码</label>
+                <input type="text" id="newCpnCode" placeholder="e.g. WELCOME10">
+            </div>
+            <div class="input-group">
+                <label>Type / 类型</label>
+                <select id="newCpnType">
+                    <option value="percent">Percent Discount</option>
+                    <option value="fixed">Fixed Amount</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Value</label>
+                <input type="number" step="0.01" id="newCpnValue" placeholder="e.g. 10">
+            </div>
+            <div class="input-group">
+                <label>Display Name</label>
+                <input type="text" id="newCpnName" placeholder="e.g. 10% Off">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-submit" onclick="addCoupon()">➕ Add Coupon</button>
+            </div>
+            <h4 style="margin:20px 0 8px;">Active Coupons</h4>
+            <div id="cpnList"></div>
+        </div>
+
+        <div class="admin-section" id="admin-export">
+            <div class="highlight-box">
+                👇 COPY ALL BELOW → Open your index.html file → Replace the 4 data blocks → Save → Upload to server<br>
+                👇 复制下方全部代码 → 打开 index.html → 替换4处数据代码 → 保存 → 上传到服务器
+            </div>
+            <div class="btn-row" style="margin:15px 0;">
+                <button class="btn btn-info" onclick="generateExportCode()">🔄 Generate Full Code / 生成永久代码</button>
+                <button class="btn btn-submit" onclick="copyExportCode()">📋 Copy ALL / 复制全部</button>
+            </div>
+            <div id="exportCode" class="code-output" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
 <script>
-// ==========================================================
-// 🔒 【商家配置锁定区】只在这里改！
-// ==========================================================
-const _MERCHANT_CONFIG = {
-    // ✅ Formspree 表单链接（必填！替换成你自己的）
-    formspreeUrl: "https://formspree.io/f/REPLACE_WITH_YOUR_FORM_ID",
-    // 店铺名称
-    shopName: "🌿MonFlorin House",
-    // 第三个分类默认名称
-    customCategoryName: "特色植物 / Special Plants",
-    // 付款提示
-    paymentTip: "请联系商家确认付款与送货方式，支持现场付款或转账，零手续费。\nPlease contact merchant to arrange payment & delivery. On-site payment or bank transfer accepted, no fees.",
-    // 📦 商品与价格（默认 MYR）
-    // 图片填文件名即可，和HTML同文件夹："img": "plant.jpg"
-    products: {
-        pot: [
-            { name: "绿萝小盆 / Pothos", price: 15, img: "" },
-            { name: "多肉组合 / Succulents", price: 25, img: "" },
-            { name: "发财树小盆 / Money Tree S", price: 35, img: "" },
-            { name: "吊兰 / Spider Plant", price: 20, img: "" },
-        ],
-        tree: [
-            { name: "大发财树1.5m / Money Tree 1.5m", price: 260, img: "" },
-            { name: "幸福树1.8m / Happy Tree 1.8m", price: 320, img: "" },
-            { name: "平安树2.0m / Cinnamon Tree 2.0m", price: 380, img: "" },
-        ],
-        custom: [
-            { name: "稀有品种A / Rare Plant A", price: 99, img: "" },
-            { name: "造型盆景 / Bonsai Style", price: 199, img: "" },
+const ADMIN_PASSWORD = atob('TW9uZmxvcmluMjAyNg==');
+let isLoggedIn = false;
+
+window.onpageshow = () => {
+    isLoggedIn = false;
+    document.getElementById("logoutBtn").classList.remove("show");
+};
+
+function logout() {
+    isLoggedIn = false;
+    document.getElementById("logoutBtn").classList.remove("show");
+    closeModal('adminModal');
+    alert("✅ 已退出登录");
+}
+
+function verifyAdminPassword() {
+    const input = document.getElementById('adminPassword').value;
+    if (input === ADMIN_PASSWORD) {
+        isLoggedIn = true;
+        closeModal('adminLoginModal');
+        document.getElementById("logoutBtn").classList.add("show");
+        document.getElementById('adminPassword').value = '';
+        renderProductAdminList();
+        renderCategoryList();
+        renderStockList();
+        renderCouponList();
+        updateCategorySelect();
+        document.getElementById('adminModal').classList.add('show');
+        bindAdminTabs();
+    } else {
+        alert('❌ Incorrect password');
+    }
+}
+
+// =========================================================
+// 📌 数据区 — 以后每次就替换下面这4块！（MS Import Start)
+// =========================================================
+let CATEGORIES = [
+    "Succulent / 仙人掌",
+    "Outdoor Plants / 室外植物",
+    "Potted plants / 盆栽植物"
+];
+
+let STOCK = {
+    "Outdoor Plants / 室外植物 - Hibiscus / Bunga Raya / 大红花 - White Red": 100,
+    "Outdoor Plants / 室外植物 - Hibiscus / Bunga Raya / 大红花 - Pink": 100,
+    "Outdoor Plants / 室外植物 - Heliconia Green": 20,
+    "Outdoor Plants / 室外植物 - Heliconia Lady Di Var": 20,
+    "Outdoor Plants / 室外植物 - Heliconia lady Diana": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Rose Pink": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Yellow": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Light Pink": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - White Pink": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Red": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Purple white": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - White": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Pink": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Orange": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Purple": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Bright Pink": 20,
+    "Outdoor Plants / 室外植物 - Japan Rose 日本玫瑰 - Random": 20,
+    "Outdoor Plants / 室外植物 - Breynia disticha": 20,
+    "Succulent / 仙人掌 - Tiger Cub (Bromeliad neoregelia) 虎纹积水凤梨": 20,
+    "Potted plants / 盆栽植物 - Pegaga Air/Coin Grass/铜钱草 - Small (8.5cm pot)": 100,
+    "Potted plants / 盆栽植物 - Pegaga Air/Coin Grass/铜钱草 - Medium (12cm pot)": 100,
+    "Potted plants / 盆栽植物 - Pegaga Air/Coin Grass/铜钱草 - Large (15cm pot)": 100,
+    "Outdoor Plants / 室外植物 - Lantana 五色花 - Yellow": 20,
+    "Outdoor Plants / 室外植物 - Lantana 五色花 - Purple": 20,
+    "Outdoor Plants / 室外植物 - Lantana 五色花 - Orange": 20,
+    "Outdoor Plants / 室外植物 - Lantana 五色花 - Pink": 20,
+    "Succulent / 仙人掌 - Sedum Hispanicum 黄金万年草": 20,
+    "Succulent / 仙人掌 - Crassula Obliqua' Gollum 简叶花月/吸财树": 20,
+    "Outdoor Plants / 室外植物 - Ixora Frozen Star 仙丹花": 20,
+    "Succulent / 仙人掌 - Tradescantia sillamontana 白雪姬": 20,
+    "Outdoor Plants / 室外植物 - Podocarpus 小红帽罗汉松": 20,
+    "Succulent / 仙人掌 - Crassula ovata 玉树": 20,
+    "Outdoor Plants / 室外植物 - Evartamia Dwarf Jasmine": 20,
+    "Outdoor Plants / 室外植物 - Codiauem Variegatum": 20,
+    "Outdoor Plants / 室外植物 - Bridelia Ovata": 20,
+    "Outdoor Plants / 室外植物 - Pink Trumpte vine": 20,
+    "Outdoor Plants / 室外植物 - Cuphea": 20,
+    "Potted plants / 盆栽植物 - String of heart with 12cm pot": 20
+};
+
+let COUPONS = {};
+
+let PRODUCTS = [
+    {
+        "category": "Outdoor Plants / 室外植物",
+        "options": [
+            {
+                "label": "Monstera with 15 cm pot",
+                "myr": 19.99,
+                "sgd": 6.99,
+                "img": ""
+            },
+            {
+                "label": "Hibiscus / Bunga Raya / 大红花 - White Red",
+                "myr": 9.99,
+                "sgd": 2.99,
+                "img": ""
+            },
+            {
+                "label": "Hibiscus / Bunga Raya / 大红花 - Pink",
+                "myr": 12.99,
+                "sgd": 3.99,
+                "img": ""
+            },
+            {
+                "label": "Heliconia Green",
+                "myr": 16.88,
+                "sgd": 5.49,
+                "img": ""
+            },
+            {
+                "label": "Heliconia Lady Di Var",
+                "myr": 16.88,
+                "sgd": 5.49,
+                "img": ""
+            },
+            {
+                "label": "Heliconia lady Diana",
+                "myr": 16.88,
+                "sgd": 5.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Rose Pink",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Yellow",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Light Pink",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - White Pink",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Red",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Purple white",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - White",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Pink",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Orange",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Purple",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Bright Pink",
+                "myr": 3.99,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Japan Rose 日本玫瑰 - Random",
+                "myr": 2.99,
+                "sgd": 0.99,
+                "img": ""
+            },
+            {
+                "label": "Breynia disticha",
+                "myr": 13.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Lantana 五色花 - Yellow",
+                "myr": 13.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Lantana 五色花 - Purple",
+                "myr": 13.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Lantana 五色花 - Orange",
+                "myr": 13.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Lantana 五色花 - Pink",
+                "myr": 13.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Ixora Frozen Star 仙丹花",
+                "myr": 13.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Podocarpus 小红帽罗汉松",
+                "myr": 23.99,
+                "sgd": 6.99,
+                "img": ""
+            },
+            {
+                "label": "Evartamia Dwarf Jasmine",
+                "myr": 9.99,
+                "sgd": 3.99,
+                "img": ""
+            },
+            {
+                "label": "Codiauem Variegatum",
+                "myr": 11.99,
+                "sgd": 4.49,
+                "img": ""
+            },
+            {
+                "label": "Bridelia Ovata",
+                "myr": 14.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Pink Trumpte vine",
+                "myr": 14.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "Cuphea",
+                "myr": 14.99,
+                "sgd": 4.99,
+                "img": ""
+            }
+        ]
+    },
+    {
+        "category": "Succulent / 仙人掌",
+        "options": [
+            {
+                "label": "Tiger Cub (Bromeliad neoregelia) 虎纹积水凤梨",
+                "myr": 9.99,
+                "sgd": 3.99,
+                "img": ""
+            },
+            {
+                "label": "Sedum Hispanicum 黄金万年草",
+                "myr": 4.5,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Crassula Obliqua' Gollum 简叶花月/吸财树",
+                "myr": 4.5,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Tradescantia sillamontana 白雪姬",
+                "myr": 4.5,
+                "sgd": 1.49,
+                "img": ""
+            },
+            {
+                "label": "Crassula ovata 玉树",
+                "myr": 10.99,
+                "sgd": 2.99,
+                "img": ""
+            }
+        ]
+    },
+    {
+        "category": "Potted plants / 盆栽植物",
+        "options": [
+            {
+                "label": "Pegaga Air/Coin Grass/铜钱草 - Small (8.5cm pot)",
+                "myr": 4.99,
+                "sgd": 1.99,
+                "img": ""
+            },
+            {
+                "label": "Pegaga Air/Coin Grass/铜钱草 - Medium (12cm pot)",
+                "myr": 9.99,
+                "sgd": 3.99,
+                "img": ""
+            },
+            {
+                "label": "Pegaga Air/Coin Grass/铜钱草 - Large (15cm pot)",
+                "myr": 12.99,
+                "sgd": 4.99,
+                "img": ""
+            },
+            {
+                "label": "String of heart with 12cm pot",
+                "myr": 18.99,
+                "sgd": 5.99,
+                "img": ""
+            }
         ]
     }
-};
-
-// 🔒 深度冻结配置 → 前端无法篡改
-const deepFreeze = obj => {
-    Object.keys(obj).forEach(prop => {
-        if (typeof obj[prop] === 'object' && obj[prop] !== null) deepFreeze(obj[prop]);
-    });
-    return Object.freeze(obj);
-};
-const CONFIG = deepFreeze(JSON.parse(JSON.stringify(_MERCHANT_CONFIG)));
-
-// 全局状态
+];
+// =========================================================
+// 📌 数据区 — 以后每次就替换下面这4块！（MS Import End)
+// =========================================================
 let g_currency = "MYR";
-let g_customDisplayName = CONFIG.customCategoryName;
 let cart = {};
-
-// ==========================================================
-// 🧩 会员信息：本地存储读写
-// ==========================================================
+let appliedCoupon = null;
 const STORAGE_KEY = "monflorin_customer_info";
+let tempImgData = "";
+let tempEditImgData = "";
+let editingPIdx = -1, editingOIdx = -1;
 
-function saveCustomerInfo() {
-    const info = {
-        name: document.getElementById("custName").value.trim(),
-        email: document.getElementById("custEmail").value.trim(),
-        phone: document.getElementById("phone").value.trim(),
-        address: document.getElementById("address").value.trim()
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
-    loadSavedBadges();
+function openLightbox(src) {
+    if (!src) return;
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('imgLightbox').classList.add('show');
+}
+function closeLightbox() {
+    document.getElementById('imgLightbox').classList.remove('show');
+    document.getElementById('lightboxImg').src = "";
 }
 
-function loadCustomerInfo() {
-    try {
-        const data = localStorage.getItem(STORAGE_KEY);
-        if (!data) return null;
-        return JSON.parse(data);
-    } catch { return null; }
-}
-
-function fillSavedInfo() {
-    const info = loadCustomerInfo();
-    if (!info) {
-        document.getElementById("memoTip").innerHTML = "💡 首次下单，提交后信息将自动保存<br>First order: your info will be saved after submission";
+let clickCount = 0, clickTimer = null;
+const CLICK_N = 6, WITHIN_MS = 1200;
+document.getElementById("adminSecretIcon").addEventListener("click", () => {
+    clickCount++;
+    clearTimeout(clickTimer);
+    if (clickCount === 1) window.scrollTo({top:0, behavior:"smooth"});
+    if (isLoggedIn) {
+        renderProductAdminList();
+        renderCategoryList();
+        renderStockList();
+        renderCouponList();
+        updateCategorySelect();
+        document.getElementById("adminModal").classList.add("show");
+        bindAdminTabs();
+        clickCount = 0;
         return;
     }
-    if (info.name) document.getElementById("custName").value = info.name;
-    if (info.email) document.getElementById("custEmail").value = info.email;
-    if (info.phone) document.getElementById("phone").value = info.phone;
-    if (info.address) document.getElementById("address").value = info.address;
-    document.getElementById("memoTip").innerHTML = "✅ 信息已保存，请核对或修改后提交<br>Info saved. Please verify or update before submitting";
-    loadSavedBadges();
-}
+    if (clickCount >= CLICK_N) {
+        clickCount = 0;
+        document.getElementById("adminLoginModal").classList.add("show");
+        return;
+    }
+    clickTimer = setTimeout(() => { clickCount = 0; }, WITHIN_MS);
+});
 
-function loadSavedBadges() {
-    const info = loadCustomerInfo();
-    if (!info) return;
-    document.getElementById("badgeName").textContent = info.name ? "✓ 已保存 / Saved" : "";
-    document.getElementById("badgeEmail").textContent = info.email ? "✓ 已保存 / Saved" : "";
-    document.getElementById("badgePhone").textContent = info.phone ? "✓ 已保存 / Saved" : "";
-    document.getElementById("badgeAddr").textContent = info.address ? "✓ 已保存 / Saved" : "";
-}
+function price(opt) { return g_currency === "MYR" ? opt.myr : opt.sgd; }
+function symbol() { return g_currency === "MYR" ? "RM" : "S$"; }
+function fmt(n) { return `${symbol()} ${n.toFixed(2)}`; }
+function closeModal(id) { document.getElementById(id).classList.remove("show"); }
 
-// ==========================================================
-// 🧩 系统功能区
-// ==========================================================
+let activeCategory = "All";
 
-function currencySymbol() {
-    return g_currency === "MYR" ? "RM" : "S$";
-}
-function formatPrice(price) {
-    return `${currencySymbol()} ${price}`;
-}
-
-window.onload = function () {
-    renderAllProducts();
-    bindTabSwitch();
-    bindCurrencySwitch();
-    document.getElementById("customTab").onclick = editCustomName;
-    document.getElementById("orderForm").addEventListener("submit", submitOrder);
-    document.getElementById("phone").addEventListener("input", cleanPhoneInput);
-};
-
-function bindCurrencySwitch() {
-    document.querySelectorAll(".currency-btn").forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll(".currency-btn").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            g_currency = btn.dataset.cur;
-            renderAllProducts();
-            updateCartSummary();
+function renderCategoryTabs() {
+    const wrap = document.getElementById("categoryTabs");
+    let html = `<div class="category-tab ${activeCategory==='All'?'active':''}" data-cat="All">All / 全部</div>`;
+    CATEGORIES.forEach(cat => {
+        html += `<div class="category-tab ${activeCategory===cat?'active':''}" data-cat="${cat}">${cat}</div>`;
+    });
+    wrap.innerHTML = html;
+    wrap.querySelectorAll(".category-tab").forEach(tab => {
+        tab.onclick = () => {
+            activeCategory = tab.dataset.cat;
+            renderCategoryTabs();
+            renderProducts();
         };
     });
 }
 
-function renderAllProducts() {
-    ["pot", "tree", "custom"].forEach(cat => renderProductList(cat));
-    updateCustomTabName();
-}
-
-function renderProductList(category) {
-    const list = document.getElementById(`list-${category}`);
+function renderProducts() {
+    const q = document.getElementById("searchInput").value.trim().toLowerCase();
+    const list = document.getElementById("productList");
     list.innerHTML = "";
-    CONFIG.products[category].forEach((item, idx) => {
-        const key = `${category}-${idx}`;
-        const card = document.createElement("div");
-        card.className = "product-card";
-        const imgSrc = item.img || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23e8f5e9' width='100' height='100'/%3E%3Ctext x='50' y='55' text-anchor='middle' font-size='30'%3E🌿%3C/text%3E%3C/svg%3E";
-        card.innerHTML = `
-            <img src="${imgSrc}" class="product-img" alt="${item.name}">
-            <div class="product-info">
-                <div class="product-name">${item.name}</div>
-                <div class="product-price">${formatPrice(item.price)}</div>
-            </div>
-            <div class="qty-box">
-                <button class="qty-btn" onclick="changeQty('${key}', -1)">−</button>
-                <span class="qty-num" id="qty-${key}">${cart[key] || 0}</span>
-                <button class="qty-btn" onclick="changeQty('${key}', 1)">+</button>
-            </div>
-        `;
-        list.appendChild(card);
+    PRODUCTS.forEach((prod, prodIdx) => {
+        if (activeCategory !== "All" && prod.category !== activeCategory) return;
+        prod.options.forEach((opt, optIdx) => {
+            const fullName = `${prod.category} - ${opt.label}`;
+            if (q && !fullName.toLowerCase().includes(q)) return;
+            const stockQty = STOCK[fullName] ?? 20;
+            const key = `${prodIdx}-${optIdx}`;
+            const card = document.createElement("div");
+            card.className = "product-card";
+            card.dataset.name = fullName;
+            const imgTag = opt.img 
+                ? `<img class="product-img" src="${opt.img}" alt="${opt.label}" onclick="event.stopPropagation(); openLightbox('${opt.img}')">` 
+                : `<div class="product-img">🌿</div>`;
+            card.innerHTML = `
+                ${imgTag}
+                <div class="product-info">
+                    <div class="product-name">${opt.label}</div>
+                    <div class="product-cat">${prod.category}</div>
+                    <div class="product-price">${fmt(price(opt))}</div>
+                    <div class="stock-info ${stockQty===0?'stock-out':''}">
+                        ${stockQty===0?'❌ Sold Out / 售罄':`📦 Stock: ${stockQty}`}
+                    </div>
+                </div>
+                <div class="qty-box">
+                    <button class="qty-btn" onclick="changeQty('${key}', -1)" ${stockQty===0?'disabled':''}>−</button>
+                    <span class="qty-num" id="qty-${key}">${cart[key]||0}</span>
+                    <button class="qty-btn" onclick="changeQty('${key}', +1)" ${stockQty===0?'disabled':''}>+</button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
     });
 }
 
 function changeQty(key, delta) {
+    const [p, o] = key.split("-").map(Number);
+    const prod = PRODUCTS[p];
+    const fullName = `${prod.category} - ${prod.options[o].label}`;
+    const max = STOCK[fullName] ?? 20;
     if (!cart[key]) cart[key] = 0;
-    cart[key] = Math.max(0, cart[key] + delta);
+    cart[key] = Math.max(0, Math.min(max, cart[key]+delta));
     if (cart[key] === 0) delete cart[key];
-    document.getElementById(`qty-${key}`).textContent = cart[key] || 0;
-    updateCartSummary();
+    document.getElementById(`qty-${key}`).textContent = cart[key]||0;
+    updateCartBar();
 }
 
-function updateCartSummary() {
-    let count = 0, total = 0;
-    Object.entries(cart).forEach(([key, qty]) => {
-        const [cat, idx] = key.split("-");
-        const prod = CONFIG.products[cat][idx];
-        count += qty;
-        total += prod.price * qty;
+function updateCartBar() {
+    let total=0, qty=0;
+    Object.entries(cart).forEach(([k,n])=>{
+        const [p,o] = k.split("-").map(Number);
+        total += price(PRODUCTS[p].options[o]) * n;
+        qty += n;
     });
-    document.getElementById("cartCount").textContent = count;
-    document.getElementById("cartTotal").textContent = formatPrice(total);
-    document.getElementById("cartBtn").disabled = count === 0;
-}
-
-function bindTabSwitch() {
-    document.querySelectorAll(".tab").forEach(tab => {
-        if (tab.id === "customTab") return;
-        tab.onclick = () => switchTab(tab.dataset.cat);
-    });
-}
-function switchTab(cat) {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".product-list").forEach(l => l.classList.remove("active"));
-    document.querySelector(`.tab[data-cat="${cat}"]`).classList.add("active");
-    document.getElementById(`list-${cat}`).classList.add("active");
-}
-
-function editCustomName() {
-    const newName = prompt("输入新分类名 / Enter name:", g_customDisplayName);
-    if (newName && newName.trim()) {
-        g_customDisplayName = newName.trim();
-        updateCustomTabName();
-    }
-}
-function updateCustomTabName() {
-    document.getElementById("customTabText").textContent = g_customDisplayName;
-}
-
-// ✅ 电话：只保留数字，最多11位，不自动加"-"
-function cleanPhoneInput(e) {
-    // 只保留数字，自动过滤符号、空格、字母
-    const cleaned = e.target.value.replace(/[^\d]/g, "");
-    // 最多只允许11位
-    e.target.value = cleaned.slice(0, 12);
-    // 隐藏错误提示
-    document.getElementById("phoneErr").style.display = "none";
-}
-
-// ✅ 校验：必须正好11位数字
-function validatePhone(phone) {
-    const digits = phone.replace(/[^\d]/g, "");
-    return /^\d{10,12}$/.test(digits);
-}
-
-function openCart() {
-    renderCartDetail();
-    document.getElementById("cartModal").classList.add("show");
-    document.getElementById("successMsg").style.display = "none";
-    document.getElementById("orderForm").style.display = "block";
-    document.getElementById("orderForm").reset();
-    // 打开时自动填充已保存信息
-    setTimeout(fillSavedInfo, 50);
-}
-function closeModal() {
-    document.getElementById("cartModal").classList.remove("show");
+    document.getElementById("cartCount").textContent = qty;
+    document.getElementById("cartTotal").textContent = fmt(total);
+    document.getElementById("cartBtn").disabled = qty === 0;
 }
 
 window.orderItems = [];
-window.orderTotal = 0;
-function renderCartDetail() {
-    const listEl = document.getElementById("cartList");
-    if (Object.keys(cart).length === 0) {
-        listEl.innerHTML = `<div class="empty-tip">购物车为空 / Cart is empty</div>`;
-        return;
+window.subtotalAmt = window.discountAmt = window.finalAmt = 0;
+
+function applyCoupon() {
+    const code = document.getElementById("couponCode").value.trim().toUpperCase();
+    const infoBox = document.getElementById("couponInfo");
+    if (COUPONS[code]) {
+        appliedCoupon = {code, ...COUPONS[code]};
+        infoBox.className = "coupon-info applied";
+        infoBox.textContent = `✅ Applied: ${appliedCoupon.name} (${code})`;
+    } else {
+        appliedCoupon = null;
+        infoBox.className = "coupon-info invalid";
+        infoBox.textContent = "❌ Invalid coupon code";
     }
-    let html = "";
-    window.orderItems = [];
-    window.orderTotal = 0;
-    Object.entries(cart).forEach(([key, qty]) => {
-        const [cat, idx] = key.split("-");
-        const prod = CONFIG.products[cat][idx];
-        const subtotal = prod.price * qty;
-        window.orderItems.push({ name: prod.name, price: prod.price, qty, subtotal });
-        window.orderTotal += subtotal;
-        html += `
-            <div class="cart-item">
-                <span>${prod.name} × ${qty}</span>
-                <span>${formatPrice(subtotal)}</span>
-            </div>
-        `;
-    });
-    html += `<div class="cart-item" style="font-weight:bold; padding-top:10px; border-top:1px solid #eee;">
-        <span>合计 / Total</span>
-        <span>${formatPrice(window.orderTotal)}</span>
-    </div>`;
-    listEl.innerHTML = html;
+    updateCartTotals();
 }
 
-async function submitOrder(e) {
-    e.preventDefault();
+function calcDiscount(subtotal) {
+    if (!appliedCoupon) return 0;
+    return appliedCoupon.type === "percent" ? subtotal * appliedCoupon.value/100 : Math.min(subtotal, appliedCoupon.value);
+}
 
-    const phone = document.getElementById("phone").value.trim();
+function updateCartTotals() {
+    renderCartList();
+    window.discountAmt = calcDiscount(window.subtotalAmt);
+    window.finalAmt = Math.max(0, window.subtotalAmt - window.discountAmt);
+    const list = document.getElementById("cartList");
+    if (discountAmt > 0) {
+        list.innerHTML += `<div class="cart-item discount-line"><span>Discount / 优惠</span><span>−${fmt(discountAmt)}</span></div>`;
+    }
+    list.innerHTML += `<div class="cart-item total-final"><span>Total / 总额</span><span>${fmt(finalAmt)}</span></div>`;
+}
+
+function renderCartList() {
+    window.orderItems = []; window.subtotalAmt = 0;
+    let html = "";
+    Object.entries(cart).forEach(([k,qty])=>{
+        const [p,o] = k.split("-").map(Number);
+        const prod = PRODUCTS[p], opt = prod.options[o];
+        const name = `${prod.category} - ${opt.label}`;
+        const prc = price(opt);
+        const sub = prc * qty;
+        window.subtotalAmt += sub;
+        window.orderItems.push({name, price:prc, qty, subtotal:sub});
+        html += `<div class="cart-item"><span>${name} × ${qty}</span><span>${fmt(sub)}</span></div>`;
+    });
+    document.getElementById("cartList").innerHTML = html;
+}
+
+function openCart() {
+    renderCartList();
+    document.getElementById("couponCode").value = "";
+    document.getElementById("couponInfo").className = "coupon-info";
+    document.getElementById("couponInfo").textContent = "";
+    appliedCoupon = null;
+    document.getElementById("successMsg").style.display = "none";
+    document.getElementById("orderForm").style.display = "block";
+    document.getElementById("phoneErr").style.display = "none";
+    updateCartTotals();
+    loadSavedProfile();
+    document.getElementById("cartModal").classList.add("show");
+}
+
+function loadSavedProfile() {
+    try {
+        const s = localStorage.getItem(STORAGE_KEY);
+        if (!s) {
+            document.getElementById("memoTip").innerHTML = "💡 Info saved locally after first order";
+            return;
+        }
+        const info = JSON.parse(s);
+        if (info.name) document.getElementById("custName").value = info.name;
+        if (info.email) document.getElementById("custEmail").value = info.email;
+        if (info.phone) document.getElementById("custPhone").value = info.phone;
+        if (info.address) document.getElementById("address").value = info.address;
+        document.getElementById("memoTip").innerHTML = "✅ Your info saved locally";
+        document.getElementById("badgeName").textContent = "✓";
+        document.getElementById("badgeEmail").textContent = "✓";
+        document.getElementById("badgePhone").textContent = "✓";
+        document.getElementById("badgeAddr").textContent = "✓";
+    } catch { }
+}
+
+function saveProfile() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        name: document.getElementById("custName").value.trim(),
+        email: document.getElementById("custEmail").value.trim(),
+        phone: document.getElementById("custPhone").value.trim(),
+        address: document.getElementById("address").value.trim()
+    }));
+}
+
+document.getElementById("custPhone").addEventListener("input", e => {
+    e.target.value = e.target.value.replace(/\D/g,"").slice(0,12);
+    document.getElementById("phoneErr").style.display = "none";
+});
+function validatePhone(s) { return /^\d{7,12}$/.test(s); }
+
+document.getElementById("orderForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const phone = document.getElementById("custPhone").value.trim();
     if (!validatePhone(phone)) {
         document.getElementById("phoneErr").style.display = "block";
         return;
     }
+    saveProfile();
+    updateCartTotals();
 
-    // ✅ 保存顾客信息到本机
-    saveCustomerInfo();
-
-    // 构造订单明细
-    let itemsText = "";
-    window.orderItems.forEach(i => {
-        itemsText += `• ${i.name} × ${i.qty} = ${currencySymbol()} ${i.subtotal}\n`;
-    });
-    const mailBody = `
-【新订单 / New Order】
-店铺 / Shop: ${CONFIG.shopName}
-币种 / Currency: ${g_currency} (${currencySymbol()})
-----------------------------------------
-商品明细 / Items:
+    let itemsText = orderItems.map(i => `• ${i.name} × ${i.qty} = ${fmt(i.subtotal)}`).join("\n");
+    const couponText = appliedCoupon ? `${appliedCoupon.code} — ${appliedCoupon.name} −${fmt(discountAmt)}` : "None";
+    const body = `
+NEW ORDER / 新订单
+━━━━━━━━━━━━━━━━━━━━━━━━
+Currency: ${symbol()}
+Items / 商品:
 ${itemsText}
-----------------------------------------
-订单总额 / Total Amount: ${formatPrice(window.orderTotal)}
-姓名 / Customer Name: ${document.getElementById("custName").value.trim()}
-邮箱 / Email: ${document.getElementById("custEmail").value.trim()}
-联系电话 / Phone: ${phone}
-送货地址 / Delivery Address: ${document.getElementById("address").value.trim()}
-备注 / Remarks: ${document.getElementById("remark").value.trim() || "无 / None"}
-----------------------------------------
-提交时间 / Submitted: ${new Date().toLocaleString("zh-CN")}
-支付方式 / Payment: 线下付款 / Offline payment (零手续费 / No fees)
-${CONFIG.paymentTip}
+Subtotal / 小计: ${fmt(subtotalAmt)}
+Coupon / 优惠: ${couponText}
+Total / 总额: ${fmt(finalAmt)}
+━━━━━━━━━━━━━━━━━━━━━━━━
+Customer / 顾客:
+Name: ${document.getElementById("custName").value.trim()}
+Email: ${document.getElementById("custEmail").value.trim()}
+Phone: ${phone}
+Address: ${document.getElementById("address").value.trim()}
+Remarks: ${document.getElementById("remark").value.trim()||"-"}
+Submitted: ${new Date().toLocaleString()}
     `.trim();
 
-    document.getElementById("hidCurrency").value = `${g_currency} (${currencySymbol()})`;
-    document.getElementById("hidSummary").value = mailBody;
+    document.getElementById("hidCurrency").value = symbol();
+    document.getElementById("hidSummary").value = body;
+    document.getElementById("hidCoupon").value = couponText;
+    document.getElementById("hidSubtotal").value = fmt(subtotalAmt);
+    document.getElementById("hidDiscount").value = fmt(discountAmt);
+    document.getElementById("hidTotalPayable").value = fmt(finalAmt);
 
-    document.getElementById("submitBtn").disabled = true;
-    document.getElementById("submitBtn").textContent = "提交中... / Submitting...";
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true; btn.textContent = "Submitting...";
 
     try {
-        const form = e.target;
-        const formData = new FormData(form);
-        formData.append("order_text", mailBody);
-
-        const res = await fetch(CONFIG.formspreeUrl, {
-            method: "POST",
-            body: formData,
-            headers: { "Accept": "application/json" }
+        const fd = new FormData(e.target);
+        fd.append("order_text", body);
+        const res = await fetch("https://formspree.io/f/xaeworzq", {
+            method: "POST", body: fd, headers: {"Accept": "application/json"}
         });
-
         if (res.ok) {
             document.getElementById("successMsg").style.display = "block";
             document.getElementById("orderForm").style.display = "none";
-            // 清空购物车
-            cart = {};
-            updateCartSummary();
-            document.querySelectorAll(".qty-num").forEach(el => el.textContent = "0");
+            cart = {}; updateCartBar();
         } else {
-            alert("提交失败，请稍后重试或联系商家。\nSubmission failed. Please try again later.");
+            alert("Submission failed. Please try again.");
         }
-    } catch (err) {
-        alert("网络错误，请稍后重试。\nNetwork error. Please try again later.");
+    } catch { alert("Network error. Please try again."); }
+
+    btn.disabled = false; btn.textContent = "Submit Order / 提交订单";
+});
+
+function bindAdminTabs() {
+    document.querySelectorAll(".admin-tab").forEach(tab => {
+        tab.onclick = () => {
+            document.querySelectorAll(".admin-tab").forEach(t=>t.classList.remove("active"));
+            document.querySelectorAll(".admin-section").forEach(s=>s.classList.remove("active"));
+            tab.classList.add("active");
+            document.getElementById(`admin-${tab.dataset.section}`).classList.add("active");
+        };
+    });
+}
+
+function updateCategorySelect() {
+    const sel = document.getElementById("newProdCat");
+    const editSel = document.getElementById("editProdCat");
+    const html = CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+    sel.innerHTML = html;
+    editSel.innerHTML = html;
+}
+
+function previewImg() {
+    const file = document.getElementById("newProdImg").files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        tempImgData = e.target.result;
+        document.getElementById("imgPreview").src = tempImgData;
+        document.getElementById("imgPreview").style.display = "block";
+    };
+    reader.readAsDataURL(file);
+}
+function previewEditImg() {
+    const file = document.getElementById("editProdImg").files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        tempEditImgData = e.target.result;
+        document.getElementById("editImgPreview").src = tempEditImgData;
+        document.getElementById("editImgPreview").style.display = "block";
+    };
+    reader.readAsDataURL(file);
+}
+
+function addProduct() {
+    const cat = document.getElementById("newProdCat").value;
+    const name = document.getElementById("newProdName").value.trim();
+    const myr = parseFloat(document.getElementById("newProdMyr").value);
+    const sgd = parseFloat(document.getElementById("newProdSgd").value);
+    const stock = parseInt(document.getElementById("newProdStock").value) || 0;
+    if (!name || !myr || !sgd) return alert("Fill name & prices");
+
+    let prod = PRODUCTS.find(p => p.category === cat);
+    if (!prod) {
+        prod = { category: cat, options: [] };
+        PRODUCTS.push(prod);
+    }
+    prod.options.push({ label: name, myr, sgd, img: tempImgData });
+    STOCK[`${cat} - ${name}`] = stock;
+
+    document.getElementById("newProdName").value = "";
+    document.getElementById("newProdMyr").value = "";
+    document.getElementById("newProdSgd").value = "";
+    document.getElementById("newProdStock").value = "20";
+    document.getElementById("newProdImg").value = "";
+    document.getElementById("imgPreview").style.display = "none";
+    tempImgData = "";
+
+    renderProducts();
+    renderProductAdminList();
+    alert(`✅ Added: ${name} — NOW go to "Export & Save" to keep it permanently!`);
+}
+
+function renderProductAdminList() {
+    const wrap = document.getElementById("prodList");
+    let html = "";
+    PRODUCTS.forEach((prod, pIdx) => {
+        prod.options.forEach((opt, oIdx) => {
+            const fullName = `${prod.category} - ${opt.label}`;
+            html += `<div class="prod-item">
+                <span class="prod-name">${fullName}</span>
+                <button class="btn btn-sm btn-info" onclick="openEditModal(${pIdx},${oIdx})">Edit / 编辑</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteProduct(${pIdx},${oIdx})">Delete / 删除</button>
+            </div>`;
+        });
+    });
+    wrap.innerHTML = html || "<div style='color:#888; padding:8px;'>No products yet</div>";
+}
+function openEditModal(pIdx, oIdx) {
+    editingPIdx = pIdx;
+    editingOIdx = oIdx;
+    const prod = PRODUCTS[pIdx];
+    const opt = prod.options[oIdx];
+    document.getElementById("editProdCat").value = prod.category;
+    document.getElementById("editProdName").value = opt.label;
+    document.getElementById("editProdMyr").value = opt.myr;
+    document.getElementById("editProdSgd").value = opt.sgd;
+    tempEditImgData = opt.img || "";
+    if (tempEditImgData) {
+        document.getElementById("editImgPreview").src = tempEditImgData;
+        document.getElementById("editImgPreview").style.display = "block";
+    } else {
+        document.getElementById("editImgPreview").style.display = "none";
+    }
+    document.getElementById("editProductModal").classList.add("show");
+}
+
+function saveEditProduct() {
+    const newCat = document.getElementById("editProdCat").value;
+    const newName = document.getElementById("editProdName").value.trim();
+    const newMyr = parseFloat(document.getElementById("editProdMyr").value);
+    const newSgd = parseFloat(document.getElementById("editProdSgd").value);
+    if (!newName || !newMyr || !newSgd) return alert("⚠️ Please fill all fields / 请填写完整信息");
+
+    const oldProd = PRODUCTS[editingPIdx];
+    const oldName = `${oldProd.category} - ${oldProd.options[editingOIdx].label}`;
+
+    // Update image if changed
+    if (tempEditImgData) {
+        oldProd.options[editingOIdx].img = tempEditImgData;
     }
 
-    document.getElementById("submitBtn").disabled = false;
-    document.getElementById("submitBtn").textContent = "提交订单 / Submit";
+    // Same category → update directly
+    if (newCat === oldProd.category) {
+        oldProd.options[editingOIdx].label = newName;
+        oldProd.options[editingOIdx].myr = newMyr;
+        oldProd.options[editingOIdx].sgd = newSgd;
+    } else {
+        // Move to new category
+        const removed = oldProd.options.splice(editingOIdx, 1)[0];
+        if (oldProd.options.length === 0) {
+            PRODUCTS.splice(editingPIdx, 1);
+        }
+        let newProd = PRODUCTS.find(p => p.category === newCat);
+        if (!newProd) {
+            newProd = { category: newCat, options: [] };
+            PRODUCTS.push(newProd);
+        }
+        removed.label = newName;
+        removed.myr = newMyr;
+        removed.sgd = newSgd;
+        newProd.options.push(removed);
+    }
+
+    // Update stock name
+    const newFullName = `${newCat} - ${newName}`;
+    STOCK[newFullName] = STOCK[oldName] ?? 20;
+    delete STOCK[oldName];
+
+    closeModal('editProductModal');
+    renderProducts();
+    renderProductAdminList();
+    renderStockList();
+    alert(`✅ Saved: ${newName} — NOW go to "Export & Save" to keep it permanently!`);
 }
+
+function deleteProduct(pIdx, oIdx) {
+    if (!confirm("⚠️ Delete this product? This cannot be undone!\n⚠️ 确定删除？删除后不可恢复！")) return;
+    const prod = PRODUCTS[pIdx];
+    const fullName = `${prod.category} - ${prod.options[oIdx].label}`;
+    prod.options.splice(oIdx, 1);
+    if (prod.options.length === 0) {
+        PRODUCTS.splice(pIdx, 1);
+    }
+    delete STOCK[fullName];
+    renderProducts();
+    renderProductAdminList();
+    renderStockList();
+    alert(`✅ Deleted: ${fullName} — NOW go to "Export & Save" to update permanently!`);
+}
+
+// ========== Category Management ==========
+function addCategory() {
+    const name = document.getElementById("newCategoryName").value.trim();
+    if (!name) return alert("⚠️ Please enter category name / 请输入分类名称");
+    if (CATEGORIES.includes(name)) return alert("⚠️ Category already exists / 分类已存在");
+    CATEGORIES.push(name);
+    document.getElementById("newCategoryName").value = "";
+    renderCategoryList();
+    updateCategorySelect();
+    renderCategoryTabs();
+    alert(`✅ Category added: ${name}`);
+}
+
+function renderCategoryList() {
+    const wrap = document.getElementById("categoryList");
+    let html = "";
+    CATEGORIES.forEach((cat, idx) => {
+        html += `<div class="cat-item">
+            <input class="cat-input" type="text" value="${cat}" onchange="renameCategory(${idx}, this.value)">
+            <button class="btn btn-sm btn-danger" onclick="deleteCategory(${idx})" title="Delete">🗑️</button>
+        </div>`;
+    });
+    wrap.innerHTML = html || "<div style='color:#888; padding:8px;'>No categories yet</div>";
+}
+
+function renameCategory(idx, newName) {
+    const oldName = CATEGORIES[idx];
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    CATEGORIES[idx] = trimmed;
+
+    // Update related products
+    PRODUCTS.forEach(prod => {
+        if (prod.category === oldName) prod.category = trimmed;
+    });
+
+    // Update stock names
+    const newStock = {};
+    Object.entries(STOCK).forEach(([k, v]) => {
+        if (k.startsWith(`${oldName} - `)) {
+            newStock[`${trimmed} - ${k.slice(oldName.length + 3)}`] = v;
+        } else {
+            newStock[k] = v;
+        }
+    });
+    Object.assign(STOCK, newStock);
+
+    updateCategorySelect();
+    renderCategoryTabs();
+    renderProducts();
+    renderProductAdminList();
+    renderStockList();
+    alert(`✅ Renamed to: ${trimmed} — Export to save permanently!`);
+}
+
+function deleteCategory(idx) {
+    const catName = CATEGORIES[idx];
+    const hasProducts = PRODUCTS.some(p => p.category === catName);
+    if (hasProducts) return alert("❌ Cannot delete: category still has products!\n请先删除该分类下的商品");
+    if (!confirm(`⚠️ Delete category "${catName}"?`)) return;
+    CATEGORIES.splice(idx, 1);
+    renderCategoryList();
+    updateCategorySelect();
+    renderCategoryTabs();
+    alert(`✅ Deleted — Export to save permanently!`);
+}
+
+// ========== Stock Management ==========
+function renderStockList() {
+    const wrap = document.getElementById("stockList");
+    let html = "";
+    PRODUCTS.forEach(prod => {
+        prod.options.forEach(opt => {
+            const fullName = `${prod.category} - ${opt.label}`;
+            const qty = STOCK[fullName] ?? 20;
+            html += `<div class="stock-item">
+                <span class="stock-name">${fullName}</span>
+                <input type="number" class="stock-input" value="${qty}" min="0" data-key="${fullName}">
+            </div>`;
+        });
+    });
+    wrap.innerHTML = html || "<div style='color:#888; padding:8px;'>No products</div>";
+}
+
+function saveStock() {
+    document.querySelectorAll(".stock-input").forEach(input => {
+        STOCK[input.dataset.key] = parseInt(input.value) || 0;
+    });
+    renderProducts();
+    alert("✅ Stock saved — Export to keep permanently!");
+}
+
+// ========== Coupon Management ==========
+function addCoupon() {
+    const code = document.getElementById("newCpnCode").value.trim().toUpperCase();
+    const type = document.getElementById("newCpnType").value;
+    const value = parseFloat(document.getElementById("newCpnValue").value);
+    const name = document.getElementById("newCpnName").value.trim();
+    if (!code || !value || !name) return alert("⚠️ Fill all fields / 请填写完整");
+    COUPONS[code] = { type, value, name };
+    document.getElementById("newCpnCode").value = "";
+    document.getElementById("newCpnValue").value = "";
+    document.getElementById("newCpnName").value = "";
+    renderCouponList();
+    alert(`✅ Coupon added: ${code} — Export to save permanently!`);
+}
+
+function renderCouponList() {
+    const wrap = document.getElementById("cpnList");
+    let html = "";
+    Object.entries(COUPONS).forEach(([code, cpn]) => {
+        const display = cpn.type === 'percent' ? `${cpn.value}% Off` : `RM ${cpn.value} Off`;
+        html += `<div class="stock-item">
+            <span class="stock-name"><strong>${code}</strong> — ${cpn.name} (${display})</span>
+            <button class="btn btn-sm btn-danger" onclick="deleteCoupon('${code}')">🗑️</button>
+        </div>`;
+    });
+    wrap.innerHTML = html || "<div style='color:#888; padding:8px;'>No coupons yet</div>";
+}
+
+function deleteCoupon(code) {
+    if (!confirm(`⚠️ Delete coupon "${code}"?`)) return;
+    delete COUPONS[code];
+    renderCouponList();
+    alert("✅ Deleted — Export to save permanently!");
+}
+
+// ========== Import Products / 批量导入功能 ==========
+function importProducts() {
+    const text = document.getElementById("importData").value;
+    if (!text.trim()) return alert("⚠️ Please paste data first / 请先粘贴数据");
+    
+    const lines = text.trim().split(/\r?\n/);
+    let success = 0, failed = 0;
+
+    lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+
+        let parts;
+        if (line.includes("\t")) {
+            parts = line.split("\t").map(s => s.trim());
+        } else {
+            parts = line.split(",").map(s => s.trim());
+        }
+
+        if (parts.length < 4) { failed++; return; }
+
+        let [cat, name, myr, sgd, stock] = parts;
+        myr = parseFloat(myr);
+        sgd = parseFloat(sgd);
+        stock = parseInt(stock) || 20;
+
+        if (!cat || !name || isNaN(myr) || isNaN(sgd)) { failed++; return; }
+
+        // Auto add category
+        if (!CATEGORIES.includes(cat)) {
+            CATEGORIES.push(cat);
+        }
+
+        // Find or create category
+        let prod = PRODUCTS.find(p => p.category === cat);
+        if (!prod) {
+            prod = { category: cat, options: [] };
+            PRODUCTS.push(prod);
+        }
+
+        // Add product
+        prod.options.push({ label: name, myr, sgd, img: "" });
+
+        // Set stock
+        STOCK[`${cat} - ${name}`] = stock;
+
+        success++;
+    });
+
+    // Show result
+    document.getElementById("importResult").innerHTML = `
+        <div style="padding:10px; background:${success>0?'#e8f5e9':'#ffebee'}; border-radius:6px;">
+            ✅ Imported / 成功导入: ${success} products<br>
+            ❌ Skipped/Failed / 跳过或失败: ${failed} lines
+        </div>
+    `;
+
+    // Clear input
+    document.getElementById("importData").value = "";
+
+    // Refresh all displays
+    renderCategoryTabs();
+    renderProducts();
+    renderProductAdminList();
+    renderCategoryList();
+    renderStockList();
+    updateCategorySelect();
+
+    if (success > 0) {
+        alert(`✅ Successfully imported ${success} products!\n\n⚠️ NOW go to "💾 Export & Save"\n→ Generate → Copy → Replace file → Upload\n→ 去「导出保存」生成代码并替换文件，才能永久保存！`);
+    }
+}
+
+// ========== Export / Generate Permanent Code ==========
+function generateExportCode() {
+    const code = `// =========================================================
+// 📌 PERMANENT DATA BLOCK — Replace this section in your index.html
+// =========================================================
+let CATEGORIES = ${JSON.stringify(CATEGORIES, null, 4)};
+
+let STOCK = ${JSON.stringify(STOCK, null, 4)};
+
+let COUPONS = ${JSON.stringify(COUPONS, null, 4)};
+
+let PRODUCTS = ${JSON.stringify(PRODUCTS, null, 4)};
+// =========================================================
+// 📌 END OF DATA BLOCK — Paste this to replace the same section in your file
+// =========================================================`;
+
+    document.getElementById("exportCode").textContent = code;
+    document.getElementById("exportCode").style.display = "block";
+    alert("✅ Code generated! Click 'Copy ALL' then replace your file!");
+}
+
+function copyExportCode() {
+    const code = document.getElementById("exportCode").textContent;
+    if (!code) return alert("⚠️ Generate code first!");
+    navigator.clipboard.writeText(code).then(() => {
+        alert("✅ COPIED TO CLIPBOARD!\n\n📋 NEXT STEPS:\n1. Open your index.html file\n2. Find the section: let CATEGORIES = [...] down to let PRODUCTS = [...]\n3. DELETE those 4 blocks\n4. PASTE the new code in its place\n5. Save & Upload to server\n\n✅ Done! Products will be PERMANENT!");
+    }).catch(() => {
+        alert("❌ Copy failed — please select and copy manually from the code box below.");
+    });
+}
+
+// ========== Currency Switch & Initial Load ==========
+document.querySelectorAll(".currency-btn").forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll(".currency-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        g_currency = btn.dataset.cur;
+        renderProducts();
+        updateCartBar();
+    };
+});
+
+document.getElementById("searchInput").addEventListener("input", renderProducts);
+
+// Initial render on page load
+renderCategoryTabs();
+renderProducts();
 </script>
+
 </body>
 </html>
